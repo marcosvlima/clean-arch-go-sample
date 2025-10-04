@@ -9,6 +9,9 @@ import (
 	"github.com/marcosvlima/clean-arch-go-sample/internal/infra/web/webserver"
 	"github.com/marcosvlima/clean-arch-go-sample/pkg/events"
 	"github.com/streadway/amqp"
+
+	// mysql
+	_ "github.com/go-sql-driver/mysql"
 )
 
 func main() {

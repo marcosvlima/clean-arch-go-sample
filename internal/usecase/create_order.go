@@ -1,4 +1,4 @@
-package usercase
+package usecase
 
 import (
 	"github.com/marcosvlima/clean-arch-go-sample/internal/entity"
@@ -21,25 +21,25 @@ type OrderOutputDTP struct {
 }
 
 // need use Order Interface and events pkg
-type CreateOrderUserCase struct {
+type CreateOrderUseCase struct {
 	OrderRepository entity.OrderRepositoryInterface
 	OrderCreated    events.EventInterface
 	EventDispatcher events.EventDispatcherInterface
 }
 
-func NewCreateOrderUserCase(
+func NewCreateOrderUseCase(
 	OrderRepository entity.OrderRepositoryInterface,
 	OrderCreated events.EventInterface,
 	EventDispatcher events.EventDispatcherInterface,
-) *CreateOrderUserCase {
-	return &CreateOrderUserCase{
+) *CreateOrderUseCase {
+	return &CreateOrderUseCase{
 		OrderRepository: OrderRepository,
 		OrderCreated:    OrderCreated,
 		EventDispatcher: EventDispatcher,
 	}
 }
 
-func (c *CreateOrderUserCase) Execute(input OrderInputDTO) (OrderOutputDTP, error) {
+func (c *CreateOrderUseCase) Execute(input OrderInputDTO) (OrderOutputDTP, error) {
 	order := entity.Order{
 		ID:    input.ID,
 		Price: input.Price,

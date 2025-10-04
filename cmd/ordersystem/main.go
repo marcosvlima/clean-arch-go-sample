@@ -37,7 +37,7 @@ func main() {
 	webOrderHandler := NewWebOrderHandler(db, eventDispatcher)
 	webserver.AddHandler("/order", webOrderHandler.Create)
 	fmt.Println("Starting web server on port", configs.WebServerPort)
-	go webserver.Start()
+	webserver.Start()
 }
 
 func getRabbitMQChannel() *amqp.Channel {

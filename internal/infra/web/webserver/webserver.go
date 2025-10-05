@@ -28,10 +28,10 @@ func (s *WebServer) AddHandler(path string, handler http.HandlerFunc) {
 // loop through the handlers and add them to the router
 // register middeleware logger
 // start the server
-func (s *WebServer) Start() error {
+func (s *WebServer) Start() {
 	s.Router.Use(middleware.Logger)
 	for path, handler := range s.Handlers {
 		s.Router.Handle(path, handler)
 	}
-	return http.ListenAndServe(s.WebServerPort, s.Router)
+	http.ListenAndServe(s.WebServerPort, s.Router)
 }

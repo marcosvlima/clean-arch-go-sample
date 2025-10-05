@@ -4,12 +4,13 @@ import (
 	"database/sql"
 	"fmt"
 	"net"
-	"os"
-	"os/signal"
-	"syscall"
+	"net/http"
 
+	graphql_handler "github.com/99designs/gqlgen/graphql/handler"
+	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/marcosvlima/clean-arch-go-sample/configs"
 	"github.com/marcosvlima/clean-arch-go-sample/internal/event/handler"
+	"github.com/marcosvlima/clean-arch-go-sample/internal/infra/graph"
 	"github.com/marcosvlima/clean-arch-go-sample/internal/infra/grpc/pb"
 	"github.com/marcosvlima/clean-arch-go-sample/internal/infra/grpc/service"
 	"github.com/marcosvlima/clean-arch-go-sample/internal/infra/web/webserver"
@@ -34,34 +35,20 @@ func main() {
 	}
 	defer db.Close()
 
-	rabbitConn, rabbitMQChannel := getRabbitMQChannel()
-	defer func() {
-		if rabbitMQChannel != nil {
-			_ = rabbitMQChannel.Close()
-		}
-		if rabbitConn != nil {
-			_ = rabbitConn.Close()
-		}
-	}()
+	rabbitMQChannel := getRabbitMQChannel()
 
 	eventDispatcher := events.NewEventDispatcher()
 	eventDispatcher.Register("OrderCreated", &handler.OrderCreatedHandler{
 		RabbitMQChannel: rabbitMQChannel,
 	})
 
-	// webserver
+	createOrderUseCase := NewCreateOrderUseCase(db, eventDispatcher)
+
 	webserver := webserver.NewWebServer(configs.WebServerPort)
 	webOrderHandler := NewWebOrderHandler(db, eventDispatcher)
 	webserver.AddHandler("/order", webOrderHandler.Create)
 	fmt.Println("Starting web server on port", configs.WebServerPort)
-	go func() {
-		if err := webserver.Start(); err != nil {
-			fmt.Println("web server stopped:", err)
-		}
-	}()
-
-	// gRPC server
-	createOrderUseCase := NewCreateOrderUseCase(db, eventDispatcher)
+	go webserver.Start()
 
 	grpcServer := grpc.NewServer()
 	createOrderService := service.NewOrderService(*createOrderUseCase)
@@ -73,29 +60,26 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	go func() {
-		if err := grpcServer.Serve(lis); err != nil {
-			fmt.Println("gRPC server stopped:", err)
-		}
-	}()
+	go grpcServer.Serve(lis)
 
-	// wait for termination signal to gracefully shutdown
-	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
-	<-sigCh
-	fmt.Println("Shutting down...")
-	grpcServer.GracefulStop()
+	srv := graphql_handler.NewDefaultServer(graph.NewExecutableSchema(graph.Config{Resolvers: &graph.Resolver{
+		CreateOrderUseCase: *createOrderUseCase,
+	}}))
+	http.Handle("/", playground.Handler("GraphQL playground", "/query"))
+	http.Handle("/query", srv)
+
+	fmt.Println("Starting GraphQL server on port", configs.GraphQLServerPort)
+	http.ListenAndServe(":"+configs.GraphQLServerPort, nil)
 }
 
-func getRabbitMQChannel() (*amqp.Connection, *amqp.Channel) {
+func getRabbitMQChannel() *amqp.Channel {
 	conn, err := amqp.Dial("amqp://guest:guest@rabbitmq:5672/")
 	if err != nil {
 		panic(err)
 	}
 	ch, err := conn.Channel()
 	if err != nil {
-		_ = conn.Close()
 		panic(err)
 	}
-	return conn, ch
+	return ch
 }

@@ -9,14 +9,68 @@ import (
 	"fmt"
 
 	"github.com/marcosvlima/clean-arch-go-sample/internal/infra/graph/model"
+	"github.com/marcosvlima/clean-arch-go-sample/internal/usecase"
 )
 
 // CreateOrder is the resolver for the createOrder field.
 func (r *mutationResolver) CreateOrder(ctx context.Context, input *model.OrderInput) (*model.Order, error) {
-	panic(fmt.Errorf("not implemented: CreateOrder - createOrder"))
+	if input == nil {
+		return nil, fmt.Errorf("input is required")
+	}
+
+	dto := usecase.OrderInputDTO{
+		ID:    input.ID,
+		Price: input.Price,
+		Tax:   input.Tax,
+	}
+
+	out, err := (&r.Resolver.CreateOrderUseCase).Execute(dto)
+	if err != nil {
+		return nil, err
+	}
+
+	return &model.Order{
+		ID:         out.ID,
+		Price:      out.Price,
+		Tax:        out.Tax,
+		FinalPrice: out.FinalPrice,
+	}, nil
+}
+
+// ListOrders is the resolver for the ListOrders field.
+func (r *queryResolver) ListOrders(ctx context.Context, page *int32, limit *int32) ([]*model.Order, error) {
+	// defaults
+	p := 1
+	l := 10
+	if page != nil {
+		p = int(*page)
+	}
+	if limit != nil {
+		l = int(*limit)
+	}
+
+	out, err := (&r.Resolver.ListOrdersUseCase).Execute(p, l)
+	if err != nil {
+		return nil, err
+	}
+
+	var res []*model.Order
+	for _, o := range out.Orders {
+		res = append(res, &model.Order{
+			ID:         o.ID,
+			Price:      o.Price,
+			Tax:        o.Tax,
+			FinalPrice: o.FinalPrice,
+		})
+	}
+	return res, nil
 }
 
 // Mutation returns MutationResolver implementation.
 func (r *Resolver) Mutation() MutationResolver { return &mutationResolver{r} }
 
+// Query returns QueryResolver implementation.
+func (r *Resolver) Query() QueryResolver { return &queryResolver{r} }
+
 type mutationResolver struct{ *Resolver }
+type queryResolver struct{ *Resolver }

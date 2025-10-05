@@ -3,6 +3,7 @@ package web
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 
 	"github.com/marcosvlima/clean-arch-go-sample/internal/entity"
 	"github.com/marcosvlima/clean-arch-go-sample/internal/usecase"
@@ -42,6 +43,33 @@ func (h *WebOrderHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	err = json.NewEncoder(w).Encode(output)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
+func (h *WebOrderHandler) List(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query()
+	page, _ := strconv.Atoi(query.Get("page"))
+	limit, _ := strconv.Atoi(query.Get("limit"))
+
+	if page <= 0 {
+		page = 1
+	}
+	if limit <= 0 {
+		limit = 10
+	}
+
+	listOrders := usecase.NewListOrdersUseCase(h.OrderRepository, h.OrderCreatedEvent, h.EventDispatcher)
+	result, err := listOrders.Execute(page, limit)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	err = json.NewEncoder(w).Encode(result)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

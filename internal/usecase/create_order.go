@@ -13,7 +13,7 @@ type OrderInputDTO struct {
 	Tax   float64 `json:"tax"`
 }
 
-type OrderOutputDTP struct {
+type OrderOutputDTO struct {
 	ID         string  `json:"id"`
 	Price      float64 `json:"price"`
 	Tax        float64 `json:"tax"`
@@ -39,7 +39,7 @@ func NewCreateOrderUseCase(
 	}
 }
 
-func (c *CreateOrderUseCase) Execute(input OrderInputDTO) (OrderOutputDTP, error) {
+func (c *CreateOrderUseCase) Execute(input OrderInputDTO) (OrderOutputDTO, error) {
 	order := entity.Order{
 		ID:    input.ID,
 		Price: input.Price,
@@ -47,10 +47,10 @@ func (c *CreateOrderUseCase) Execute(input OrderInputDTO) (OrderOutputDTP, error
 	}
 	order.CalculateFinalPrice()
 	if err := c.OrderRepository.Save(&order); err != nil {
-		return OrderOutputDTP{}, err
+		return OrderOutputDTO{}, err
 	}
 
-	dto := OrderOutputDTP{
+	dto := OrderOutputDTO{
 		ID:         order.ID,
 		Price:      order.Price,
 		Tax:        order.Tax,

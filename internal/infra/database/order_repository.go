@@ -34,3 +34,35 @@ func (r *OrderRepository) GetTotal() (int, error) {
 	}
 	return total, nil
 }
+
+func (r *OrderRepository) FindAll(page, limit int) ([]entity.Order, error) {
+	var orders []entity.Order
+	query := "SELECT id, price, tax, final_price FROM orders"
+	var args []interface{}
+
+	if page > 0 && limit > 0 {
+		query += " LIMIT ? OFFSET ?"
+		args = append(args, limit, (page-1)*limit)
+	}
+
+	rows, err := r.Db.Query(query, args...)
+
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var order entity.Order
+		if err := rows.Scan(&order.ID, &order.Price, &order.Tax, &order.FinalPrice); err != nil {
+			return nil, err
+		}
+		orders = append(orders, order)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return orders, nil
+}

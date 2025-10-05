@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS orders (
     PRIMARY KEY (id)
 );
 
----
+--
 
 -- Insere exemplos de dados de pedidos (orders) mais realistas.
 INSERT INTO
